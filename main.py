@@ -8,7 +8,7 @@ pygame.init()
 
 # starting window width, height
 
-class mainParent:
+class MainParent:
     def __init__(self, x, y, x_change, y_change, imgStr):
         self.x = x
         self.y = y
@@ -19,57 +19,49 @@ class mainParent:
     def draw(self, x, y):
         screen.blit(self.img, (self.x, self.y))
 
+    def move(self, x_change, y_change):
+        self.x += x_change
+        self.y += y_change
+
+    def boundaries(self, xChng, yChng):
+        if self.x <= 0 or self.x >= 736:
+            self.x = ((self.x >= 736) * 736)
+            self.x_change *= xChng
+            self.y += yChng
 
 
+class SpaceShip(MainParent):
+    def __init__(self, x, y, x_change, y_change, imgStr):
+        super().__init__(x, y, x_change, y_change, imgStr)
 
+
+class Alien(MainParent):
+    def __init__(self, x, y, x_change, y_change, imgStr):
+        super().__init__(x, y, x_change, y_change, imgStr)
+
+
+class Bullet(MainParent):
+    def __init__(self, x, y, x_change, y_change, imgStr):
+        super().__init__(x, y, x_change, y_change, imgStr)
+        self.bullet_State = 'ready'
+
+    def reset(self):
+        self.bullet_State = "ready"
+        self.y = 480
+
+    def bullBoundaries(self):
+        if self.y<= -40:
+            self.reset()
 
 screen = pygame.display.set_mode((800, 600))
 pygame.display.set_caption("Space Invaders")
-player_img = pygame.image.load('spaceShip.png')
 
-player_X = 370
-player_Y = 480
-playerX_change = 0
-playerY_change = 0
+ship = SpaceShip(370, 480, 0, 0, 'spaceShip.png')
+enemy = Alien(100, 100, 2, 20, 'redAlien.png')
+bullet = Bullet(ship.x, 480, 0, 5, 'bullet.png')
 
-
-
-enemy_img = pygame.image.load('redAlien.png')
-enemy_X = random.randint(0, 735)
-enemy_Y = random.randint(50, 150)
-enemyX_change = 2
-enemyY_change = 20
-
-bullet_img = pygame.image.load("bullet.png")
-bullet_X = 0
-bullet_Y = 480
-bulletX_change = 0
-bulletY_change = 5
-bullet_state = "ready"
-
-score = 0
 # Background
 background = pygame.image.load("spaceBackground.png")
-
-
-def player(x, y):
-    screen.blit(player_img, (x, y))  # draws image onto window
-
-
-def enemy(x, y):
-    screen.blit(enemy_img, (x, y))  # draws image onto window
-
-
-def fire_bullet(x, y):
-    global bullet_state
-    bullet_state = "fire"
-    screen.blit(bullet_img, (x + 16, y + 10))
-
-
-def isCollide(enemX, enemY, bullX, bullY):
-    distance = math.sqrt((math.pow(enemX - bullX, 2)) + (math.pow(enemY - bullY, 2)))
-    return distance < 27
-
 
 running = True
 
@@ -79,56 +71,34 @@ while running:
     screen.blit(background, (0, 0))
 
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
-                playerX_change = -1.5
+                ship.x_change = -1.6
             if event.key == pygame.K_RIGHT:
-                playerX_change = 1.5
-            if event.key == pygame.K_SPACE and bullet_state != "fire":
-                bullet_X = player_X  # gets current pos of x so bullet doesnt follow ship
-                fire_bullet(bullet_X, bullet_Y)
+                ship.x_change = 1.5
+            if event.key == pygame.K_SPACE and bullet.bullet_State != 'fire':
+                bullet.x = ship.x
+                bullet.bullet_State = 'fire'
+                bullet.draw(bullet.x, bullet.y)
+
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
-                playerX_change = 0
+                ship.x_change = 0
 
-    player_X += playerX_change
-    if player_X <= 0:
-        player_X = 0
-    elif player_X >= 736:
-        player_X = 736
+    ship.move(ship.x_change, ship.y_change)
+    enemy.move(enemy.x_change, 0)
 
-    enemy_X += enemyX_change
-    if enemy_X <= 0:
-        enemyX_change = 2
-        enemy_Y += enemyY_change
-    elif enemy_X >= 736:
-        enemyX_change = -2
-        enemy_Y += enemyY_change
+    ship.boundaries(1, 0)
+    enemy.boundaries(-1, enemy.y_change)
 
-    if bullet_Y <= -40:
-        bullet_Y = 480
-        bullet_state = "ready"
-    if bullet_state == "fire":
-        fire_bullet(bullet_X, bullet_Y)
-        bullet_Y -= bulletY_change
+    bullet.bullBoundaries()
+    if bullet.bullet_State == 'fire':
+        bullet.draw(bullet.x, bullet.y)
+        bullet.y -= bullet.y_change
 
-    #collision
-    collision = isCollide(enemy_X, enemy_Y, bullet_X, bullet_Y)
-    if collision:
-        bullet_state = "ready"
-        bullet_Y = 480
-        score += 1
-        print(score)
-        enemy_X = random.randint(0, 735)
-        enemy_Y = random.randint(50, 150)
+    ship.draw(ship.x, ship.y)
+    enemy.draw(enemy.x, enemy.y)
 
-
-    player(player_X, player_Y)
-    enemy(enemy_X, enemy_Y)
     pygame.display.update()  # update screen
-
 
 quit()
