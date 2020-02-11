@@ -6,8 +6,6 @@ import math
 pygame.init()
 
 
-# starting window width, height
-
 class MainParent:
     def __init__(self, x, y, x_change, y_change, imgStr):
         self.x = x
@@ -38,6 +36,15 @@ class SpaceShip(MainParent):
 class Alien(MainParent):
     def __init__(self, x, y, x_change, y_change, imgStr):
         super().__init__(x, y, x_change, y_change, imgStr)
+        self.bad = True
+
+    def setImage(self):
+        imgstr = ''
+        if self.bad:
+            imgstr = './images/redAlien.png'
+        else:
+            imgstr = './images/greenAlien.png'
+        self.img = pygame.image.load(imgstr)
 
 
 class Bullet(MainParent):
@@ -50,23 +57,44 @@ class Bullet(MainParent):
         self.y = 480
 
     def bullBoundaries(self):
-        if self.y<= -40:
+        if self.y <= -40:
             self.reset()
+
 
 screen = pygame.display.set_mode((800, 600))
 pygame.display.set_caption("Space Invaders")
 
-ship = SpaceShip(370, 480, 0, 0, 'spaceShip.png')
-enemy = Alien(100, 100, 2, 20, 'redAlien.png')
-bullet = Bullet(ship.x, 480, 0, 5, 'bullet.png')
+ship = SpaceShip(370, 480, 0, 0, './images/spaceShip.png')
+enemies = []
+# enemy = Alien(50, random.randint(50, 200), 2, 20, './images/redAlien.png')
+bullet = Bullet(ship.x, 480, 0, 5, './images/bullet.png')
 
+for i in range(3):
+    enemy = Alien(random.randint(10, 550), random.randint(50, 200), random.randint(4, 4), random.randint(5, 15),
+                  './images/redAlien.png')
+    enemies.append(enemy)
+    print(f'{i}, x = {enemy.x},y = {enemy.y}')
 # Background
-background = pygame.image.load("spaceBackground.png")
-
+background = pygame.image.load("./images/spaceBackground.png")
+gameOver = pygame.image.load('./images/gameOver.jpg')
 running = True
+win = False
+score = 0
 
-while running:
 
+def isCollision(alien, missel):
+    distance = math.sqrt((math.pow(alien.x - missel.x, 2)) + (math.pow(alien.y - missel.y, 2)))
+    return distance < 27
+
+
+def allGreen(aliens):
+    for alien in aliens:
+        if alien.bad:
+            return False
+    return True
+
+
+while running and not win:
     screen.fill((0, 0, 0))
     screen.blit(background, (0, 0))
 
@@ -86,19 +114,36 @@ while running:
                 ship.x_change = 0
 
     ship.move(ship.x_change, ship.y_change)
-    enemy.move(enemy.x_change, 0)
-
     ship.boundaries(1, 0)
-    enemy.boundaries(-1, enemy.y_change)
-
     bullet.bullBoundaries()
+
+    # Collision
+    for enemy in enemies:
+        collision = isCollision(enemy, bullet)
+        if collision:
+            bullet.reset()
+            score += enemy.bad
+            enemy.y = random.randint(200, 400)
+            enemy.bad = not enemy.bad
+            enemy.setImage()
+            print(score)
+        enemy.move(enemy.x_change, 0)
+        enemy.draw(enemy.x, enemy.y)
+        enemy.boundaries(-1, enemy.y_change)
+
+        if enemy.y >= 420 and not enemy.bad:
+            win = not enemy.bad
+            enemy.y = 1000
+        elif enemy.y >= 420 and enemy.bad:
+            running = False
+    win = allGreen(enemies)
     if bullet.bullet_State == 'fire':
         bullet.draw(bullet.x, bullet.y)
         bullet.y -= bullet.y_change
 
     ship.draw(ship.x, ship.y)
-    enemy.draw(enemy.x, enemy.y)
 
     pygame.display.update()  # update screen
-
-quit()
+if not win:
+    screen.blit(gameOver, (0, 0))
+    pygame.display.update()
